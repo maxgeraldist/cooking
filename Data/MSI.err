@@ -1,0 +1,10 @@
+2023-07-19T19:52:57.718511Z 0 [Warning] [MY-011070] [Server] '--sync-relay-log-info' is deprecated and will be removed in a future release.
+2023-07-19T19:52:57.719938Z 0 [System] [MY-010116] [Server] C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe (mysqld 8.0.34) starting as process 6244
+2023-07-19T19:52:57.756827Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2023-07-19T19:52:57.993352Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2023-07-19T19:52:58.262729Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2023-07-19T19:52:58.263809Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2023-07-19T19:52:58.306012Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060
+2023-07-19T19:52:58.306141Z 0 [System] [MY-010931] [Server] C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe: ready for connections. Version: '8.0.34'  socket: ''  port: 3306  MySQL Community Server - GPL.
+2023-07-19T21:02:51.063194Z 0 [System] [MY-013105] [Server] C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe: Normal shutdown.
+2023-07-19T21:02:51.670287Z 0 [System] [MY-010910] [Server] C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe: Shutdown complete (mysqld 8.0.34)  MySQL Community Server - GPL.

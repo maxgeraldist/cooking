@@ -7,7 +7,7 @@ import mysql.connector
 mydb = mysql.connector.connect(
     host="sql7.freesqldatabase.com",
     user="sql7634649",
-    passwd="",
+    passwd="yLCcKDtW53",
     database="sql7634649"
 )
 print(mydb)

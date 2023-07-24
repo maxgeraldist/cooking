@@ -79,7 +79,8 @@ def process_file(filename, rows):
             continue
         ingredients = pd.Series(ingredients_list)
         # Remove text in parentheses
-        ingredients = ingredients.str.replace(r'\([^)]*\)|ADVERTISEMENT|\"ADVERTISEMENT\"', '', regex=True)
+        ingredients = ingredients.str.replace('\"ADVERTISEMENT\"', '', regex=True)
+        ingredients = ingredients.str.replace(r'\([^)]*\)|ADVERTISEMENT', '', regex=True)
         # Split the ingredient strings into parts
         parts = ingredients.str.split(expand=True)
         # Extract the amount, measurement, and ingredient name from the parts
@@ -102,14 +103,22 @@ def process_file(filename, rows):
         rows.extend(new_df.to_dict('records'))# Create an empty list to store the data for each row
 rows = []
 i = 1
+error_count=0
 input_files = ["recipes1.json", "recipes2.json", "recipes3.json"]
 # Process each input file separately (the dataframe is too big for the excel file format))
 for input_file in input_files:
-    process_file(input_file, rows)
-    df = pd.DataFrame(rows)
-    df.to_excel("recipes"+str(i)+".xlsx", index=False)
-    i += 1
-    print(str(i)+" files processed")
-    rows = []
+    try:
+        process_file(input_file, rows)
+        df = pd.DataFrame(rows)
+        i += 1
+        print(str(i)+" files processed")
+        df.to_excel("recipes"+str(i)+".xlsx", index=False)
+        rows = []
+    except:
+        error = "Error in file "+input_file
+        print(error)
+        error_count+=1
+        print("Error count: "+str(error_count))
+        continue
 end_time = time.time()
 print("Time taken to run this cell :", end_time - start_time, "seconds.")

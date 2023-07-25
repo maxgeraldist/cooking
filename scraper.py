@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import re
 import time
+import os
 
 
 start_time = time.time()
@@ -9,6 +10,7 @@ def extract_ingredient_data(row, measurement_units):
     amount = ""
     measurement = ""
     ingredient_name = ""
+    error=False
     # Check if the row contains any non-None elements
     if any(elem is not None for elem in row):
         # Check if the first element contains a number
@@ -21,6 +23,8 @@ def extract_ingredient_data(row, measurement_units):
                 # Convert the fractional part to a float
                 numerator, denominator = amount_str.split('/')
                 frac_part = float(numerator) / float(denominator)
+                if type(numerator) == str: 
+                    error = True
                 # Check if there is a whole part
                 if len(row) > 1 and row[1] and row[1][0].isdigit():
                     # Extract the whole part from the second element
@@ -67,6 +71,8 @@ def process_file(filename, rows):
     with open(filename, "r") as f:
         # Read the contents of the input file into a string
         file_contents = f.read()
+        error_count = 0
+
         # Remove or escape any invalid control characters
         file_contents = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', file_contents)
         # Parse the modified string using json.loads
@@ -83,8 +89,13 @@ def process_file(filename, rows):
         ingredients = ingredients.str.replace(r'\([^)]*\)|ADVERTISEMENT', '', regex=True)
         # Split the ingredient strings into parts
         parts = ingredients.str.split(expand=True)
-        # Extract the amount, measurement, and ingredient name from the parts
+        # Extract the amount, measurement, and ingredient name from the parts   
         data = parts.apply(lambda row: extract_ingredient_data(row, measurement_units), axis=1)
+        if error==True:
+            print("Error processing row: ", row)
+            error_count += 1
+            error=False
+            continue
         data.columns = ["amount", "measurement", "ingredient_name"]
         amount = data["amount"]
         measurement = data["measurement"]
@@ -104,21 +115,18 @@ def process_file(filename, rows):
 rows = []
 i = 1
 error_count=0
-input_files = ["recipes1.json", "recipes2.json", "recipes3.json"]
+# Loop through each input file
+
+input_dir = 'Input_files'
+input_files = [os.path.join(input_dir, name) for name in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, name))]
 # Process each input file separately (the dataframe is too big for the excel file format))
-for input_file in input_files:
-    try:
-        process_file(input_file, rows)
-        df = pd.DataFrame(rows)
-        i += 1
-        print(str(i)+" files processed")
-        df.to_excel("recipes"+str(i)+".xlsx", index=False)
-        rows = []
-    except:
-        error = "Error in file "+input_file
-        print(error)
-        error_count+=1
-        print("Error count: "+str(error_count))
-        continue
-end_time = time.time()
+for i, input_file in enumerate(input_files, start=1): 
+    process_file(input_file, rows)
+    df = pd.DataFrame(rows)
+    i += 1
+    print(str(i)+" files processed")
+    df.to_excel("recipes"+str(i)+".xlsx", index=False)
+    rows = []
+    end_time = time.time()
 print("Time taken to run this cell :", end_time - start_time, "seconds.")
+print("Number of errors: ", error_count)

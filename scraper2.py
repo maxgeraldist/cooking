@@ -3,7 +3,6 @@ import re
 import time
 import os
 import pandas as pd
-start_time = time.time()
 def get_numerator_denominator(string):
     match = re.search(r'(\d+)/(\d+)', string)
     if match:
@@ -19,20 +18,16 @@ def extract_ingredient_data(row, measurement_units):
     fraction = 0
     if row is None:
         return pd.Series([amount, measurement, ingredient_name])
-    # print('test0',row)
     if '/' in row:
         numerator, denominator = get_numerator_denominator(row)
         fraction = float(float(numerator) / float(denominator)) if denominator is not None else 0
         row = re.sub((str(numerator) + '/' + str(denominator)), '', row)
-    # print('test1',row)
     words = row.split(" ")
-    # print('test2',words)
     for word in words:
         word=word.replace("-"," ")
         if word in measurement_units:
             measurement = word
             words.remove(word)
-    # print('test3',words)
     if words[0].isdigit():
         amount = int(words[0])
         words.remove(words[0])
@@ -40,7 +35,6 @@ def extract_ingredient_data(row, measurement_units):
         amount = float(fraction)
     else:
         amount = 1
-    # print('test4',words)
     ingredient_name = " ".join(words)
     return pd.Series([amount, measurement, ingredient_name])
 # Define the measurement units we want to extract
@@ -54,11 +48,8 @@ def process_file(filename, rows):
         # Iterate over the data and extract the information
     for recipe_id, recipe_data in data.items():
         instructions = recipe_data.get("instructions", "")     
-        # this is so stupid but it doesn't work otherwise - ascii remover doesn't work and decode-encode is way to slow
-        # instructions = ''.join([char for char in instructions if ord(char) < 128])
         recipe_name = recipe_data.get("title", "")
         ingredients_list = recipe_data.get("ingredients", [])
-        # print(ingredients_list, 'ingredients_list')
         if not ingredients_list :
             continue
         ingredients = pd.Series(ingredients_list)
@@ -66,7 +57,6 @@ def process_file(filename, rows):
         ingredients = ingredients.str.replace(r'\([^)]*\)|ADVERTISEMENT', '', regex=True)
         #remove empty rows
         ingredients = ingredients[ingredients != '']
-        # ingredients = ingredients.apply(lambda x: ''.join([char for char in x if ord(char) < 128]))
         # Extract the amount, measurement, and ingredient name from the parts 
         if any(elem is not None for elem in recipe_data):
             data = ingredients.apply(lambda x: extract_ingredient_data(x, measurement_units))
@@ -85,20 +75,20 @@ def process_file(filename, rows):
         }
         new_df = pd.DataFrame(data)
         # Append all rows to the rows list
-        rows.extend(new_df.to_dict('records'))# Create an empty list to store the data for each row
+        rows.extend(new_df.to_dict('records'))
 rows = []
 i = 0
 # Loop through each input file and process it
 csv_or_xlsx = input("Press 1 for csv or 2 for xlsx outputs: ")
 # remap the input to the correct file extension
 if csv_or_xlsx == '1':
-    cs_or_xlsx = 'csv'
+    cs_or_xlsx = '.csv'
 else:
-    cs_or_xlsx = 'xlsx'
+    cs_or_xlsx = '.xlsx'
 input_dir = 'Input_files'
 input_files = [os.path.join(input_dir, name) for name in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, name))]
 # Process each input file separately (the dataframe is too big for the excel file format))
-for i, input_file in enumerate(input_files, start=1): 
+for i, input_file in enumerate(input_files, start=1):
     process_file(input_file, rows)
     df = pd.DataFrame(rows)
     df.to_csv(("output" + str(i) + cs_or_xlsx), index=False)

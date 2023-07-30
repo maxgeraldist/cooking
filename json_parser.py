@@ -3,6 +3,21 @@ import re
 import time
 import os
 import pandas as pd
+start_time = time.time()
+# Rewrite symbols like '⅔' (unicode fraction) in a way that can be evaluated
+def redo_fractions(string):
+    string = string.replace('⅔', '2/3')
+    string = string.replace('⅓', '1/3')
+    string = string.replace('¼', '1/4')
+    string = string.replace('½', '1/2')
+    string = string.replace('¾', '3/4')
+    string = string.replace('⅛', '1/8')
+    string = string.replace('⅜', '3/8')
+    string = string.replace('⅝', '5/8')
+    string = string.replace('⅞', '7/8')
+    return string
+# 
+# Get the numerator and denominator of a fraction
 def get_numerator_denominator(string):
     match = re.search(r'(\d+)/(\d+)', string)
     if match:
@@ -10,12 +25,13 @@ def get_numerator_denominator(string):
         denominator = int(match.group(2))
         return numerator, denominator
     return None, None
-measurement_units = ["cup", "cups", "teaspoon", "teaspoons", "tablespoon", "tablespoons", "ounce","-ounce","-ounces", "ounces", "pound", "pounds", "clove", "cloves", "inch", "inches","can","cans","package","packages", "pinch","pinches"]
+measurement_units = ["cup", "cups", "teaspoon", "teaspoons", "tablespoon", "tablespoons", "ounce","-ounce","-ounces", "ounces", "pound", "pounds", "clove", "cloves", "inch", "inches","can","cans","package","packages", "pinch","pinches", "slice","slices", "shot","shots"]
 def extract_ingredient_data(row, measurement_units):
     amount = 0
     measurement = ""
     ingredient_name = ""
     fraction = 0
+    row = redo_fractions(row)
     if row is None:
         return pd.Series([amount, measurement, ingredient_name])
     if '/' in row:
@@ -76,21 +92,22 @@ def process_file(filename, rows):
         new_df = pd.DataFrame(data)
         # Append all rows to the rows list
         rows.extend(new_df.to_dict('records'))
-rows = []
 i = 0
-# Loop through each input file and process it
 csv_or_xlsx = input("Press 1 for csv or 2 for xlsx outputs: ")
 # remap the input to the correct file extension
-if csv_or_xlsx == '1':
-    cs_or_xlsx = '.csv'
-else:
-    cs_or_xlsx = '.xlsx'
+
 input_dir = 'Input_files'
 input_files = [os.path.join(input_dir, name) for name in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, name))]
 # Process each input file separately (the dataframe is too big for the excel file format))
 for i, input_file in enumerate(input_files, start=1):
+    rows = []
     process_file(input_file, rows)
+    print("Number of rows in the dataframe: ", len(rows))
     df = pd.DataFrame(rows)
-    df.to_csv(("output" + str(i) + cs_or_xlsx), index=False)
+    if csv_or_xlsx == "1":
+        df.to_csv(("output" + str(i) + ".csv"), index=False)
+    elif csv_or_xlsx == "2":
+        df.to_excel(("output" + str(i) + ".xlsx"), index=False)
     print(str(i)+" files processed")
+    df = None
 print("Total time: %s seconds" % (time.time() - start_time))

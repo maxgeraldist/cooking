@@ -16,7 +16,7 @@ def redo_fractions(string):
     string = string.replace('⅝', '5/8')
     string = string.replace('⅞', '7/8')
     return string
-# 
+ 
 # Get the numerator and denominator of a fraction
 def get_numerator_denominator(string):
     match = re.search(r'(\d+)/(\d+)', string)
@@ -25,29 +25,54 @@ def get_numerator_denominator(string):
         denominator = int(match.group(2))
         return numerator, denominator
     return None, None
-measurement_units = ["cup", "cups", "teaspoon", "teaspoons", "tablespoon", "tablespoons", "ounce","-ounce","-ounces", "ounces", "pound", "pounds", "clove", "cloves", "inch", "inches","can","cans","package","packages", "pinch","pinches", "slice","slices", "shot","shots"]
+measurement_units = ["cup", "cups", "teaspoon", "teaspoons", "tablespoon", "tablespoons", "ounce",
+                     "ounce", "ounces","oz","pound", "pounds", "clove", "cloves", "inch",
+                     "inches","can","cans","package","packages", "pinch","pinches", "slice","slices",
+                     "shot","shots","dash","dashes","head", "heads","bunch","bunches","pint","pints",
+                     "sheet","sheets","stalk","stalks","stick","sticks","sprig","sprigs","drop","drops",
+                     "gram","grams","kilogram","kilograms","liter","liters","milliliter","milliliters",
+                     "milligram","milligrams","quart","quarts","gallon","gallons","pound","pounds",
+                     "mg","ml","g","kg","tsp","tbsp","lb","oz","pt","qt","gal","fl oz","fl. oz","fl.oz"]
+number_words = {'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+                    'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10'}
 def extract_ingredient_data(row, measurement_units):
     amount = 0
     measurement = ""
     ingredient_name = ""
     fraction = 0
     row = redo_fractions(row)
+    row = row.replace('-', ' ')
+    row = row.strip()
     if row is None:
         return pd.Series([amount, measurement, ingredient_name])
     if '/' in row:
         numerator, denominator = get_numerator_denominator(row)
         fraction = float(float(numerator) / float(denominator)) if denominator is not None else 0
         row = re.sub((str(numerator) + '/' + str(denominator)), '', row)
+    elif 'to' in row and 'to taste' not in row:
+        match1 = re.search(r'(\d+) to (\d+)', row)
+        if match1:
+            amount = (float(match1.group(1))+float(match1.group(2)))/2
+            row = re.sub((str(match1.group(1)) + ' to ' + str(match1.group(2))), '', row)
+    match2 = re.search(r'(\d+)', row)
+    if match2:
+        amount = float(match2.group(1))
+        row = re.sub(str(match2.group(1)), '', row)
+    if 'to taste' in row:
+        row = re.sub('to taste', '', row)
     words = row.split(" ")
-    for word in words:
-        word=word.replace("-"," ")
+    new_words = []
+    for word in words[:]:
         if word in measurement_units:
             measurement = word
             words.remove(word)
-    if words[0].isdigit():
-        amount = int(words[0])
+    if words and words[0] in number_words:
+        amount = number_words[words[0]]
         words.remove(words[0])
-    elif fraction != 0:
+    if words and words[0].isdigit():
+        amount = int(words[0])+fraction
+        words.remove(words[0])
+    elif words and fraction != 0:
         amount = float(fraction)
     else:
         amount = 1
@@ -71,6 +96,7 @@ def process_file(filename, rows):
         ingredients = pd.Series(ingredients_list)
         ingredients = ingredients.str.replace('\"ADVERTISEMENT\"', '', regex=True)
         ingredients = ingredients.str.replace(r'\([^)]*\)|ADVERTISEMENT', '', regex=True)
+        ingredients = ingredients.str.lower()
         #remove empty rows
         ingredients = ingredients[ingredients != '']
         # Extract the amount, measurement, and ingredient name from the parts 
@@ -82,12 +108,12 @@ def process_file(filename, rows):
         ingredient_name = data["ingredient_name"]
         # Create a DataFrame from the extracted data
         data = {
-            "recipe_id": [recipe_id if i == 0 else "" for i in range(len(ingredients))],
-            "recipe_name": [recipe_name if i == 0 else "" for i in range(len(ingredients))],
+            "recipe_id": recipe_id,
+            "recipe_name": recipe_name,
             "ingredient": ingredient_name,
             "amount": amount,
             "measurement": measurement,
-            "instructions": [instructions if i == 0 else "" for i in range(len(ingredients))],
+            "instructions": instructions,
         }
         new_df = pd.DataFrame(data)
         # Append all rows to the rows list

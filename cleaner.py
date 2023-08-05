@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import time
 import re
+import numpy as np
 
 start_time = time.time()
 
@@ -65,6 +66,10 @@ def clean_data(df, ingredients):
     df = pd.merge(df, ingredients, on='ingredient', how='left')
     df['ingredient'] = df['ID']
     df.drop(['ID'], axis=1, inplace=True)
+    # Create a boolean mask to identify the first row of each recipe
+    mask = df['recipe_id'] != df['recipe_id'].shift()
+    # Use the mask to set the recipe_id, recipe_name, and instructions columns to NaN for all rows except the first row of each recipe
+    df.loc[~mask, ['recipe_id', 'recipe_name', 'instructions']] = np.nan
     return df, ingredients
 input_dir = 'Recipes'
 output_dir = 'Cleaned_Recipes'

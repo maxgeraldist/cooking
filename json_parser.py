@@ -3,6 +3,7 @@ import re
 import time
 import os
 import pandas as pd
+from measurement_units import measurement_units
 start_time = time.time()
 # Rewrite symbols like '⅔' (unicode fraction) in a way that can be evaluated
 def redo_fractions(string):
@@ -25,14 +26,7 @@ def get_numerator_denominator(string):
         denominator = int(match.group(2))
         return numerator, denominator
     return None, None
-measurement_units = ["cup", "cups", "teaspoon", "teaspoons", "tablespoon", "tablespoons", "ounce",
-                     "ounce", "ounces","oz","pound", "pounds", "clove", "cloves", "inch",
-                     "inches","can","cans","package","packages", "pinch","pinches", "slice","slices",
-                     "shot","shots","dash","dashes","head", "heads","bunch","bunches","pint","pints",
-                     "sheet","sheets","stalk","stalks","stick","sticks","sprig","sprigs","drop","drops",
-                     "gram","grams","kilogram","kilograms","liter","liters","milliliter","milliliters",
-                     "milligram","milligrams","quart","quarts","gallon","gallons","pound","pounds",
-                     "mg","ml","g","kg","tsp","tbsp","lb","oz","pt","qt","gal","fl oz","fl. oz","fl.oz"]
+
 number_words = {'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
                     'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10'}
 def extract_ingredient_data(row, measurement_units):
@@ -43,13 +37,15 @@ def extract_ingredient_data(row, measurement_units):
     row = redo_fractions(row)
     row = row.replace('-', ' ')
     row = row.strip()
-    if row is None:
-        return pd.Series([amount, measurement, ingredient_name])
+    if row is none:
+        return pd.series([amount, measurement, ingredient_name])
+    if 'to taste' in row:
+        row = re.sub('to taste', '', row)
     if '/' in row:
         numerator, denominator = get_numerator_denominator(row)
-        fraction = float(float(numerator) / float(denominator)) if denominator is not None else 0
+        fraction = float(float(numerator) / float(denominator)) if denominator is not none else 0
         row = re.sub((str(numerator) + '/' + str(denominator)), '', row)
-    elif 'to' in row and 'to taste' not in row:
+    elif 'to' in row:
         match1 = re.search(r'(\d+) to (\d+)', row)
         if match1:
             amount = (float(match1.group(1))+float(match1.group(2)))/2
@@ -58,8 +54,6 @@ def extract_ingredient_data(row, measurement_units):
     if match2:
         amount = float(match2.group(1))
         row = re.sub(str(match2.group(1)), '', row)
-    if 'to taste' in row:
-        row = re.sub('to taste', '', row)
     words = row.split(" ")
     new_words = []
     for word in words[:]:
@@ -77,36 +71,36 @@ def extract_ingredient_data(row, measurement_units):
     else:
         amount = 1
     ingredient_name = " ".join(words)
-    return pd.Series([amount, measurement, ingredient_name])
-# Define the measurement units we want to extract
+    return pd.series([amount, measurement, ingredient_name])
+# define the measurement units we want to extract
 def process_file(filename, rows): 
     with open(filename, "r") as f:
-        # Read the contents of the input file into a string
+        # read the contents of the input file into a string
         file_contents = f.read()
         file_contents = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', file_contents)
-        # Parse the modified string using json.loads
+        # parse the modified string using json.loads
         data = json.loads(file_contents) 
-        # Iterate over the data and extract the information
+        # iterate over the data and extract the information
     for recipe_id, recipe_data in data.items():
         instructions = recipe_data.get("instructions", "")     
         recipe_name = recipe_data.get("title", "")
         ingredients_list = recipe_data.get("ingredients", [])
         if not ingredients_list :
             continue
-        ingredients = pd.Series(ingredients_list)
-        ingredients = ingredients.str.replace('\"ADVERTISEMENT\"', '', regex=True)
-        ingredients = ingredients.str.replace(r'\([^)]*\)|ADVERTISEMENT', '', regex=True)
+        ingredients = pd.series(ingredients_list)
+        ingredients = ingredients.str.replace('\"advertisement\"', '', regex=true)
+        ingredients = ingredients.str.replace(r'\([^)]*\)|advertisement', '', regex=true)
         ingredients = ingredients.str.lower()
         #remove empty rows
         ingredients = ingredients[ingredients != '']
-        # Extract the amount, measurement, and ingredient name from the parts 
-        if any(elem is not None for elem in recipe_data):
+        # extract the amount, measurement, and ingredient name from the parts 
+        if any(elem is not none for elem in recipe_data):
             data = ingredients.apply(lambda x: extract_ingredient_data(x, measurement_units))
         data.columns = ["amount", "measurement", "ingredient_name"]
         amount = data["amount"]
         measurement = data["measurement"]
         ingredient_name = data["ingredient_name"]
-        # Create a DataFrame from the extracted data
+        # create a dataframe from the extracted data
         data = {
             "recipe_id": recipe_id,
             "recipe_name": recipe_name,
@@ -115,11 +109,11 @@ def process_file(filename, rows):
             "measurement": measurement,
             "instructions": instructions,
         }
-        new_df = pd.DataFrame(data)
-        # Append all rows to the rows list
+        new_df = pd.dataframe(data)
+        # append all rows to the rows list
         rows.extend(new_df.to_dict('records'))
 i = 0
-csv_or_xlsx = input("Press 1 for csv or 2 for xlsx outputs: ")
+csv_or_xlsx = input("press 1 for csv or 2 for xlsx outputs: ")
 # remap the input to the correct file extension
 
 input_dir = 'Input_files'

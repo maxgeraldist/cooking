@@ -12,6 +12,11 @@ def remove_after_for(s):
         if idx != -1:
             return s[:idx]
     return s
+def remove_after_or(s):
+    idx = s.find(' or ')
+    if idx != -1:
+        return s[:idx]
+    return s
 def remove_before_semicolon_in_middle(s):
     if s.endswith(':'):
         return s
@@ -23,7 +28,7 @@ def preclean(df):
     df = df[df['ingredient'].notna()]
     df['ingredient'] = df['ingredient'].str.lower()
     df['ingredient'] = df['ingredient'].str.strip(' ,.')
-    df = df[~df['ingredient'].str.startswith('*')]
+    df = df[~df['ingredient'].str.startswith('*'):MasonStatus]
     maskpreclean = df['ingredient'].str.startswith('of ')
     df.loc[maskpreclean, 'ingredient'] = df.loc[maskpreclean, 'ingredient'].str[3:]
     df = df[~df['ingredient'].str.startswith('ingredient info')]
@@ -31,13 +36,16 @@ def preclean(df):
     maskequipment = df['ingredient'].str.startswith('special equipment')
     df.loc[maskequipment, 'instructions'] = df[maskequipment].apply(lambda x: str(x['ingredient']) + '\n\n' + str(x['instructions']), axis=1)
     df.loc[maskequipment, 'ingredient'] = ''
+    maskarticle = df['ingredient'].str.startswith('a ')
+    df.loc[maskarticle, 'ingredient'] = df.loc[maskarticle, 'ingredient'].str[2:]
     return df
 
 def clean_instructions(df, instructions):
     df['ingredient'] = df['ingredient'].str.replace(r'\s*if.*', '', regex=True)
-    df['ingredient'] = df['ingredient'].apply(lambda x: re.sub(r' or .*', '', x))
     df['ingredient'] = df['ingredient'].apply(lambda x: re.sub(r' such as .*', '', x))
     df['ingredient'] = df['ingredient'].apply(remove_after_for)
+    df['ingredient'] = df['ingredient'].apply(remove_after_or)
+
     df['Instruction'] = df['ingredient'].str.extract(f'({"|".join(instructions["Instruction"])})', expand=False)
     df = df.merge(instructions, on='Instruction', how='left')
     mask = df['Instruction'].notnull()
@@ -74,7 +82,8 @@ def clean_data(df, ingredients):
 input_dir = 'Recipes'
 output_dir = 'Cleaned_Recipes'
 input_files = [os.path.join(input_dir, name) for name in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, name))]
-
+next_id = 0
+id_map = {}
 i = 1
 for input_file in input_files:
     if '.xlsx' in input_file:
@@ -85,6 +94,14 @@ for input_file in input_files:
         format = False
     else:
         continue
+    for old_id in df['recipe_id'].unique():
+        # Check if the old recipe ID is already in the id_map dictionary
+        if old_id not in id_map:
+            # If it is not, add a new entry to the id_map dictionary with a new sequential ID
+            id_map[old_id] = next_id
+            next_id += 1
+    # Use the id_map dictionary to update the recipe_id column in the DataFrame
+    df['recipe_id'] = df['recipe_id'].map(id_map)
     df = preclean(df)
     df, ingredients = clean_data(df, ingredients)
     output_file = os.path.join(output_dir, os.path.basename(input_file))

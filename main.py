@@ -1,12 +1,20 @@
 import time
+importtimestart = time.time()
 import pandas as pd
 import sys
 import os
 
+from utils.tosql import into_sql_measurement_units
+
 # Add the Functions directory to the Python path
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Functions"))
-from cleaner import preclean, recount_IDs, clean_data, refactor_ingredients
-from json_parser import process_file
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+from cleaner import recount_IDs, clean_data, refactor_ingredients, fill_ids
+from json_parser import process_file 
+from instructions import instructions
+from tosql import into_sql_ingredients, into_sql_instructions, into_sql_measurement_units, into_sql_recipes
+from measurement_units import measurement_units
+
+print("Import time: {}".format(time.time() - importtimestart))
 
 input_dir = "Input_files"
 output_dir = "Output_files"
@@ -15,13 +23,7 @@ input_files = [
     for name in os.listdir(input_dir)
     if os.path.isfile(os.path.join(input_dir, name))
 ]
-output_files = [
-    os.path.join(output_dir, name)
-    for name in os.listdir(output_dir)
-    if os.path.isfile(os.path.join(output_dir, name))
-]
 
-csv_or_xlsx = input("Enter 1 for csv or 2 for xlsx: ")
 i = 1
 n = int(
     input("Enter how aggressive you want the refactoring to be (1-10 recommended): ")
@@ -38,25 +40,30 @@ def main():
     for i, input_file in enumerate(input_files, start=1):
         rows = []
         df = process_file(input_file, rows)
-        df, id_map = recount_IDs(df, id_map)
-        df = preclean(df)
-        df, ingredients = clean_data(df, ingredients, n)
+        df, ingredients = clean_data(df, ingredients,output_dir)
         dfs.append(df)  # append the dataframe to the list
-        print("Number of rows in the dataframe: ", len(rows))
         print(str(i) + " files processed")
         df = None
     result = pd.concat(dfs)  # concatenate the list of dataframes
-    print('Number of rows in the dataframe: ', len(result))
+    result, id_map = recount_IDs(result, id_map)
     result, ingredients = refactor_ingredients(result, ingredients, n)
-    print("Number of rows in the dataframe: ", len(result))
-    if csv_or_xlsx == "1":
-        result.to_csv(("output" + ".csv"), index=False)
-        ingredients.to_csv(("ingredients" + ".csv"), index=False)
-    elif csv_or_xlsx == "2":
-        result.to_excel(("output" + ".xlsx"), index=False)
-        ingredients.to_excel(("ingredients" + ".xlsx"), index=False)
-    print("Done!")
+    result = fill_ids(result,output_dir)
+    # save results to multiple .csv files, one per 1m rows
+    for i, df in enumerate(
+        [result[i : i + 1000000] for i in range(0, len(result), 1000000)]
+    ):
+        df.to_csv(os.path.join(output_dir, "output" + str(i) + ".csv"), index=False)
+    ingredients.to_csv(os.path.join(output_dir,"ingredients" + ".csv"), index=False)
+    instructions.to_csv(os.path.join(output_dir,"instructions" + ".csv"), index=False)
+    print("Parsing complete.")
     print("Time taken: {}".format(time.time() - start_time))
+    user = input("Enter the username for the SQL server: ")
+    pw = input("Enter the password for the SQL server: ")
+    print("Writing to SQL...")
+    into_sql_ingredients(ingredients,user,pw)
+    into_sql_instructions(instructions,user,pw)
+    into_sql_measurement_units(measurement_units,user,pw)
+    into_sql_recipes(result,user,pw)
 
 
 main()

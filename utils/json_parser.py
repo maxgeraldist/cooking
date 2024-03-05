@@ -1,7 +1,7 @@
 import json
 import re
 import pandas as pd
-from measurement_units import measurement_units
+from .measurement_units import measurement_units
 
 
 # Rewrite symbols like '⅔' (unicode fraction) in a way that can be evaluated

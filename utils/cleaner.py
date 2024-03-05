@@ -1,9 +1,9 @@
 import pandas as pd
 import re
 import numpy as np
-from refactor import Trie
-from instructions import *
-from measurement_units import measurement_units
+from .refactor import Trie
+from .instructions import *
+from .measurement_units import measurement_units
 import os
 
 
@@ -94,14 +94,14 @@ def preclean(df):
     return df
 
 
-def clean_instructions(df, instructions,outputdir):
+def clean_instructions(df, instructions, outputdir):
     print("Cleaning instructions...")
     df["instruction_ID"] = df["ingredient"].apply(
-        lambda x: instructions[
-            instructions["Instruction"].apply(lambda y: y in x)
-        ].index[0]
-        if any(instructions["Instruction"].apply(lambda y: y in x))
-        else None
+        lambda x: (
+            instructions[instructions["Instruction"].apply(lambda y: y in x)].index[0]
+            if any(instructions["Instruction"].apply(lambda y: y in x))
+            else None
+        )
     )
     df = df.merge(instructions, left_on="instruction_ID", right_index=True, how="left")
     mask = df["Instruction"].notnull()
@@ -114,9 +114,9 @@ def clean_instructions(df, instructions,outputdir):
 
 
 def clean_measurements(df, measurements):
-    print('Cleaning measurement units...')
+    print("Cleaning measurement units...")
     unit_to_index = {unit: index for index, unit in enumerate(measurements)}
-    df['measurement'] = df['measurement'].map(unit_to_index)
+    df["measurement"] = df["measurement"].map(unit_to_index)
     return df
 
 
@@ -145,10 +145,10 @@ def refactor_ingredients(recipes, ingredients, n):
             popular_ingredients_trie.insert(row["ingredient"], index)
     for index, row in ingredients.iterrows():
         if row["ingredientcount"] <= n:
-            ingredients.at[
-                index, "ID_replace"
-            ] = popular_ingredients_trie.search_longest_substring(
-                row["ingredient"].replace("[:,.()]", "")
+            ingredients.at[index, "ID_replace"] = (
+                popular_ingredients_trie.search_longest_substring(
+                    row["ingredient"].replace("[:,.()]", "")
+                )
             )
     id_map = ingredients.set_index("ID")["ID_replace"].to_dict()
     recipes["ID"] = recipes["ID"].apply(lambda x: replace_id1(x, id_map))
@@ -164,12 +164,12 @@ def refactor_ingredients(recipes, ingredients, n):
     return recipes, ingredients
 
 
-def clean_data(df, ingredients,outputdir):
+def clean_data(df, ingredients, outputdir):
     print("Cleaning data...")
-    df = clean_instructions(df, instructions,outputdir)
-    df = clean_measurements(df,measurement_units)
-    df.drop(['Index'], axis=1, inplace=True)
-    df.drop(['Instruction'], axis=1,inplace=True)
+    df = clean_instructions(df, instructions, outputdir)
+    df = clean_measurements(df, measurement_units)
+    df.drop(["Index"], axis=1, inplace=True)
+    df.drop(["Instruction"], axis=1, inplace=True)
     df = df[df["ingredient"].notnull()]
     unique_ingredients = pd.DataFrame({"ingredient": df["ingredient"].unique()})
     unique_ingredients["ingredientcount"] = 0
@@ -200,11 +200,12 @@ def recount_IDs(df, id_map):
     df["recipe_id"] = df["recipe_id"].map(id_map)
     return df, id_map
 
+
 # create a dataframe that links recipe_name and instructions to recipe_id, remove name and instructions from df, save the new df to a csv, then ffill the recipe_id columns
-def fill_ids(df,outputdir):
+def fill_ids(df, outputdir):
     print("Filling IDs...")
     recipe_id_df = df[["recipe_id", "recipe_name", "instructions"]].dropna()
     recipe_id_df.to_csv(os.path.join(outputdir, "recipe_id.csv"), index=False)
     df.drop(["recipe_name", "instructions"], axis=1, inplace=True)
-    df['recipe_id'] = df['recipe_id'].fillna(method='ffill')
-    return df
+    df["recipe_id"] = df["recipe_id"].fillna(method="ffill")
+    return df, recipe_id_df

@@ -1,20 +1,20 @@
 import time
-importtimestart = time.time()
+
 import pandas as pd
-import sys
 import os
 
-from utils.tosql import into_sql_measurement_units
+from utils.cleaner import recount_IDs, clean_data, refactor_ingredients, fill_ids
+from utils.json_parser import process_file
+from utils.instructions import instructions
+from utils.tosql import (
+    into_sql_ingredients,
+    into_sql_descriptions,
+    into_sql_measurement_units,
+    into_sql_recipes,
+    into_sql_instructions,
+)
+from utils.measurement_units import measurement_units
 
-# Add the Functions directory to the Python path
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
-from cleaner import recount_IDs, clean_data, refactor_ingredients, fill_ids
-from json_parser import process_file 
-from instructions import instructions
-from tosql import into_sql_ingredients, into_sql_instructions, into_sql_measurement_units, into_sql_recipes
-from measurement_units import measurement_units
-
-print("Import time: {}".format(time.time() - importtimestart))
 
 input_dir = "Input_files"
 output_dir = "Output_files"
@@ -40,30 +40,34 @@ def main():
     for i, input_file in enumerate(input_files, start=1):
         rows = []
         df = process_file(input_file, rows)
-        df, ingredients = clean_data(df, ingredients,output_dir)
+        df, ingredients = clean_data(df, ingredients, output_dir)
         dfs.append(df)  # append the dataframe to the list
         print(str(i) + " files processed")
         df = None
     result = pd.concat(dfs)  # concatenate the list of dataframes
     result, id_map = recount_IDs(result, id_map)
     result, ingredients = refactor_ingredients(result, ingredients, n)
-    result = fill_ids(result,output_dir)
+    result, ids = fill_ids(result, output_dir)
     # save results to multiple .csv files, one per 1m rows
     for i, df in enumerate(
         [result[i : i + 1000000] for i in range(0, len(result), 1000000)]
     ):
         df.to_csv(os.path.join(output_dir, "output" + str(i) + ".csv"), index=False)
-    ingredients.to_csv(os.path.join(output_dir,"ingredients" + ".csv"), index=False)
-    instructions.to_csv(os.path.join(output_dir,"instructions" + ".csv"), index=False)
+    ingredients.to_csv(os.path.join(output_dir, "ingredients" + ".csv"), index=False)
+    instructions.to_csv(os.path.join(output_dir, "instructions" + ".csv"), index=False)
     print("Parsing complete.")
-    print("Time taken: {}".format(time.time() - start_time))
+    print("Time spent cleaning: {}".format(time.time() - start_time))
     user = input("Enter the username for the SQL server: ")
     pw = input("Enter the password for the SQL server: ")
     print("Writing to SQL...")
-    into_sql_ingredients(ingredients,user,pw)
-    into_sql_instructions(instructions,user,pw)
-    into_sql_measurement_units(measurement_units,user,pw)
-    into_sql_recipes(result,user,pw)
+    insert_time = time.time()
+    into_sql_ingredients(ingredients, user, pw)
+    into_sql_descriptions(instructions, user, pw)
+    into_sql_measurement_units(measurement_units, user, pw)
+    into_sql_recipes(result, user, pw)
+    into_sql_instructions(ids, user, pw)
+    print("SQL writing complete.")
+    print("Time spent writing to SQL: {}".format(time.time() - insert_time))
 
 
 main()

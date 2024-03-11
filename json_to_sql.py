@@ -2,6 +2,7 @@ import time
 
 import pandas as pd
 import os
+import numpy as np
 
 from utils.cleaner import recount_IDs, clean_data, refactor_ingredients, fill_ids
 from utils.json_parser import process_file
@@ -36,18 +37,22 @@ def main():
     start_time = time.time()
     print("Processing files...")
     ingredients = pd.DataFrame(columns=["ID", "ingredient", "ingredientcount"])
-    dfs = []  # use a list instead of a dictionary
+    dfs = []
     for i, input_file in enumerate(input_files, start=1):
         rows = []
         df = process_file(input_file, rows)
         df, ingredients = clean_data(df, ingredients, output_dir)
-        dfs.append(df)  # append the dataframe to the list
+        dfs.append(df)
         print(str(i) + " files processed")
         df = None
     result = pd.concat(dfs)  # concatenate the list of dataframes
     result, id_map = recount_IDs(result, id_map)
     result, ingredients = refactor_ingredients(result, ingredients, n)
-    result, ids = fill_ids(result, output_dir)
+    result = fill_ids(result, output_dir)
+    result["measurement"] = result["measurement"].replace(np.nan, 9999).astype(int)
+    result["instruction_ID"] = (
+        result["instruction_ID"].replace(np.nan, 9999).astype(int)
+    )
     # save results to multiple .csv files, one per 1m rows
     for i, df in enumerate(
         [result[i : i + 1000000] for i in range(0, len(result), 1000000)]
@@ -61,11 +66,11 @@ def main():
     pw = input("Enter the password for the SQL server: ")
     print("Writing to SQL...")
     insert_time = time.time()
-    into_sql_ingredients(ingredients, user, pw)
-    into_sql_descriptions(instructions, user, pw)
+    into_sql_ingredients(os.path.join(output_dir, "ingredients" + ".csv"), user, pw)
+    into_sql_descriptions(os.path.join(output_dir, "instructions" + ".csv"), user, pw)
     into_sql_measurement_units(measurement_units, user, pw)
     into_sql_recipes(result, user, pw)
-    into_sql_instructions(ids, user, pw)
+    into_sql_instructions(os.path.join(output_dir, "recipe_id.csv"), user, pw)
     print("SQL writing complete.")
     print("Time spent writing to SQL: {}".format(time.time() - insert_time))
 

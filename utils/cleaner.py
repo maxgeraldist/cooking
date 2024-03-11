@@ -208,4 +208,4 @@ def fill_ids(df, outputdir):
     recipe_id_df.to_csv(os.path.join(outputdir, "recipe_id.csv"), index=False)
     df.drop(["recipe_name", "instructions"], axis=1, inplace=True)
     df["recipe_id"] = df["recipe_id"].fillna(method="ffill")
-    return df, recipe_id_df
+    return df

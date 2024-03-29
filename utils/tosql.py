@@ -1,7 +1,7 @@
 import pyodbc
 
 
-def into_sql_recipes(df, user, pw):
+def into_sql_recipedetails(df, user, pw):
     conn = pyodbc.connect(
         "DRIVER={MySQL};SERVER=localhost;DATABASE=Cooking;USER="
         + user
@@ -11,11 +11,11 @@ def into_sql_recipes(df, user, pw):
     )
     cursor = conn.cursor()
     cursor.execute(
-        "CREATE TABLE Recipes (recipe_id int, ingredient int, amount int, measurement int, instruction_ID int)"
+        "CREATE OR REPLACE TABLE recipe_details (id bigint auto_increment primary key, recipe_id int, ingredient int, amount int, measurement int, description_ID int)"
     )
     for index, row in df.iterrows():
         cursor.execute(
-            "INSERT INTO Recipes (recipe_id, ingredient, amount, measurement, instruction_ID) values (?,?,?,?,?)",
+            "INSERT INTO recipe_details (recipe_id, ingredient, amount, measurement, description_ID) values (?,?,?,?,?)",
             int(row["recipe_id"]),
             int(row["ingredient"]),
             int(row["amount"]),
@@ -35,7 +35,7 @@ def into_sql_ingredients(filepath, user, pw):
     )
     cursor = conn.cursor()
     cursor.execute(
-        "CREATE TABLE ingredients (ingredient_id int, ingredient_name varchar(2550))"
+        "CREATE OR REPLACE TABLE ingredients (ingredient_id int PRIMARY KEY, ingredient_name varchar(2550))"
     )
     cursor.execute(
         "LOAD DATA LOCAL INFILE '" + filepath + "' INTO TABLE ingredients "
@@ -57,7 +57,7 @@ def into_sql_descriptions(filepath, user, pw):
     )
     cursor = conn.cursor()
     cursor.execute(
-        "CREATE TABLE descriptions (description varchar(225), description_id int)"
+        "CREATE OR REPLACE TABLE descriptions (description varchar(225), description_id int PRIMARY KEY)"
     )
     cursor.execute(
         "LOAD DATA LOCAL INFILE '" + filepath + "' INTO TABLE descriptions "
@@ -79,7 +79,7 @@ def into_sql_measurement_units(measurement_units, user, pw):
     )
     cursor = conn.cursor()
     cursor.execute(
-        "CREATE TABLE measurement_units (unit_id int, unit_name varchar(255))"
+        "CREATE OR REPLACE TABLE measurement_units (unit_id int PRIMARY KEY, unit_name varchar(255))"
     )
     for index, unit in enumerate(measurement_units):
         cursor.execute(
@@ -90,7 +90,7 @@ def into_sql_measurement_units(measurement_units, user, pw):
         conn.commit()
 
 
-def into_sql_instructions(filepath, user, pw):
+def into_sql_recipes(filepath, user, pw):
     conn = pyodbc.connect(
         "DRIVER={MySQL};SERVER=localhost;DATABASE=Cooking;USER="
         + user
@@ -100,10 +100,10 @@ def into_sql_instructions(filepath, user, pw):
     )
     cursor = conn.cursor()
     cursor.execute(
-        "CREATE TABLE instructions (recipe_id int, recipe_name varchar(2550), recipe_instructions TEXT)"
+        "CREATE OR REPLACE TABLE recipes (recipe_id int PRIMARY KEY, recipe_name varchar(2550), recipe_descriptions TEXT)"
     )
     cursor.execute(
-        "LOAD DATA LOCAL INFILE '" + filepath + "' INTO TABLE instructions "
+        "LOAD DATA LOCAL INFILE '" + filepath + "' INTO TABLE recipes "
         "FIELDS TERMINATED BY ',' "
         "OPTIONALLY ENCLOSED BY '\"' "
         "LINES TERMINATED BY '\\n' "

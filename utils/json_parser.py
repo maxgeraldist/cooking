@@ -130,7 +130,7 @@ def process_file(filename, rows):
             "ingredient": ingredient_name,
             "amount": amount,
             "measurement": measurement,
-            "instructions": instructions,
+            "descriptions": instructions,
         }
         new_df = pd.DataFrame(data)
         rows.extend(new_df.to_dict("records"))

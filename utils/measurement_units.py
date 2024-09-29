@@ -1,4 +1,5 @@
-measurement_units = [
+"""This module contains a list of common measurement units used in recipes."""
+measurement_units: list = [
     "bottle",
     "bunches",
     "bunch",

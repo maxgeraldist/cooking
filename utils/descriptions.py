@@ -1,9 +1,10 @@
+"""
+This file contains the descriptions that are used to clean the ingredients in the recipe
+"""
 import pandas as pd
-
-# Description: This file contains the descriptions that are used to clean the ingredients in the recipe
 descriptions = pd.DataFrame(
     {
-        "Instruction": [
+        "Description": [
             "baked",
             "beaten",
             "blanched",
@@ -79,4 +80,4 @@ descriptions = pd.DataFrame(
         ]
     }
 )
-descriptions["Index"] = descriptions.index
+descriptions["description_ID"] = descriptions.index

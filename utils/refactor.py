@@ -8,6 +8,7 @@ class TrieNode:
         self.is_end_of_word = False
         self.index = None
 
+
 # Define a Trie class to represent the trie data structure
 class Trie:
     def __init__(self):
@@ -32,7 +33,10 @@ class Trie:
                     break
                 current_node = current_node.children[char]
                 substring_length += 1
-                if current_node.is_end_of_word and substring_length > longest_substring_length:
+                if (
+                    current_node.is_end_of_word
+                    and substring_length > longest_substring_length
+                ):
                     longest_substring_index = current_node.index
                     longest_substring_length = substring_length
         return longest_substring_index
@@ -45,16 +49,17 @@ class Trie:
             current_node = current_node.children[char]
         return current_node.index
 
+
 popular_ingredients_trie = Trie()
 n = 3
 
 
-
-
 # Define a function to replace the IDs of unpopular ingredients
 def replace_IDs(row):
-    if row['ingredientcount'] <= n:
+    if row["ingredientcount"] <= n:
         # Find the longest popular ingredient whose name is a substring of the current ingredient's name
-        longest_substring_index = popular_ingredients_trie.search_longest_substring(row['ingredient'].replace('[:,.()]', ''))
+        longest_substring_index = popular_ingredients_trie.search_longest_substring(
+            row["ingredient"].replace("[:,.()]", "")
+        )
         if longest_substring_index is not None:
             return longest_substring_index
